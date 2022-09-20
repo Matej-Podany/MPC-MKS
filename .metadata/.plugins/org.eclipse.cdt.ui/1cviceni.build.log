@@ -1,0 +1,10 @@
+12:41:26 **** Incremental Build of configuration Debug for project 1cviceni ****
+make -j4 all 
+arm-none-eabi-size   1cviceni.elf 
+   text	   data	    bss	    dec	    hex	filename
+    588	      8	   1568	   2164	    874	1cviceni.elf
+Finished building: default.size.stdout
+ 
+
+12:41:26 Build Finished. 0 errors, 0 warnings. (took 362ms)
+

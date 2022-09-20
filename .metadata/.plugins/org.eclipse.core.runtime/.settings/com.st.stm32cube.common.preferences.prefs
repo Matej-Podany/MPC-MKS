@@ -1,0 +1,5 @@
+DeviceConfigurationTool..FirmwareRepositoryPath=C\:\\Temp\\221344\\MPC-MKS
+DeviceConfigurationTool..UpdaterCheckInterval=5
+DeviceConfigurationTool..UpdaterDataRefresh=dataRefreshDataOnly
+DeviceConfigurationTool..UpdaterDataRefreshInterfval=3
+eclipse.preferences.version=1
