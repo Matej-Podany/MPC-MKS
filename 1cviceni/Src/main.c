@@ -28,10 +28,10 @@ int main(void)
     RCC->AHBENR |= RCC_AHBENR_GPIOAEN;
     GPIOA->MODER |= GPIO_MODER_MODER5_0;
     GPIOA->BRR = (1<<5); // reset
-    uint8_t pole[32] = {1,0,1,0,1,0,0,1,1,1,0,1,1,1,0,1,1,1,
+    /*uint8_t pole[32] = {1,0,1,0,1,0,0,1,1,1,0,1,1,1,0,1,1,1,
     					0,0,1,0,1,0,1,0,0,0,0,0,0,0};
     // pole filled with sos sequence
-	/* Loop forever */
+	 Loop forever
 	while (1) {
 		for (uint8_t i = 0; i < 32; i++) { // loop for blinking
 			if (pole[i] == 1){ // condition for SOS sequence
@@ -43,6 +43,25 @@ int main(void)
 			for (volatile uint32_t i = 0; i < 100000; i++) {}
 		}
 
-	}
-
+	}*/
+    uint32_t morse = 0b10101001110111011100101010000000;
+    uint8_t i = 0;
+    //testovat nejvyssi bit
+    //(1UL << 31) je to same jako 0b10000000000000000000000000000000
+    //(morse & 1UL << 31)
+    //morse = morse << 1;
+    while (1) {
+    	if (morse & (1UL << 31)){
+    		GPIOA->BSRR = (1<<5); // set
+    	}
+    	else {
+    		GPIOA->BRR = (1<<5); // reset
+    	}
+    	morse = morse << 1;
+    	if (i++ == 31){
+    		morse = 0b10101001110111011100101010000000;
+    		i = 0;
+    	}
+    	for (volatile uint32_t i = 0; i < 100000; i++) {}
+    }
 }
