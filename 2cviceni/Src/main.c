@@ -74,19 +74,39 @@ void tlacitka(){ // non/blocking function for reading buttons S1 and S2 and swit
 	}*/
 
 	// TASK 5
-	static uint16_t debounce = 0xFFFF;
-	static uint32_t old_s1;
-	static uint32_t old_s2;
 	static uint32_t off_time;
 	static uint32_t stop_sample;
-	uint32_t new_s2;
-	uint32_t new_s1;
+	static uint16_t debounce_s2;
+	static uint16_t debounce_s1;
 
 	//Sampling buttons every 5 ms
 	if (Tick > stop_sample){
-		new_s2 = GPIOC->IDR & (1<<0); // S2
-		new_s1 = GPIOC->IDR & (1<<1); // S1
+		debounce_s1 <<= 1;
+		if (GPIOC->IDR & (1<<1)){ // if button S1 has value 1, set debounce_s1 LSB to 1
+			debounce_s1 |= 0x0001;
+		}
+
+		debounce_s2 <<= 1;
+		if (GPIOC->IDR & (1<<0)){ // if button S2 has value 1, set debounce_s2 LSB to 1
+			debounce_s2 |= 0x0001;
+		}
 		stop_sample = Tick + DEBOUNCE_TIME;
+	}
+
+	if (debounce_s2 == 0x8000) { // if debounce_s2 indicates no more zakmitu 0b10000000000000000000
+		off_time = Tick + LED_TIME_SHORT;
+		GPIOB->BSRR = (1<<0);
+		debounce_s2 = 0xFFFF;
+	}
+
+	if (debounce_s1 == 0x8000) { // if debounce_s1 indicates no more zakmitu 0b10000000000000000000
+		off_time = Tick + LED_TIME_LONG;
+		GPIOB->BSRR = (1<<0);
+		debounce_s1 = 0xFFFF;
+	}
+
+	if (Tick > off_time) { // switches LED2 off when the time is right
+		GPIOB->BRR = (1<<0);
 	}
 }
 
