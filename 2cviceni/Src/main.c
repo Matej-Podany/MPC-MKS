@@ -26,6 +26,7 @@
 #define LED_TIME_BLINK 300 // preprocesor replaces LED_TIME_BLINK with number 300
 #define LED_TIME_SHORT 100 // preprocesor replaces LED_TIME_SHORT with number 100
 #define LED_TIME_LONG 1000 // preprocesor replaces LED_TIME_LONG with number 1000
+#define SAMPLE_TIME 40 // preprocesor replaces SAMPLE_TIME with number 40
 
 volatile uint32_t Tick; // global variable
 
@@ -40,26 +41,35 @@ void blikac(void)// this function is non-blockative counter for LED_TIME_BLINK m
 }
 
 void tlacitka(){ // non/blocking function for reading buttons S1 and S2 and switching on LED2 for 1000 ms (S1) or 100 ms (S2)
+	static uint32_t old_s1;
 	static uint32_t old_s2;
 	static uint32_t off_time;
-	uint32_t new_s2 = GPIOC->IDR & (1<<0);
+	static uint32_t stop_sample;
+	uint32_t new_s2;
+	uint32_t new_s1;
+
+	/*Sampling buttons every 40 ms*/
+	if (Tick > stop_sample){
+		new_s2 = GPIOC->IDR & (1<<0); // S2
+		new_s1 = GPIOC->IDR & (1<<1); // S1
+		stop_sample = Tick + SAMPLE_TIME;
+	}
+
 	if (old_s2 && !new_s2) { // falling edge
 		off_time = Tick + LED_TIME_SHORT;
 		GPIOB->BSRR = (1<<0);
 	}
 	old_s2 = new_s2;
 
-	static uint32_t old_s1;
-	uint32_t new_s1 = GPIOC->IDR & (1<<1);
 	if (old_s1 && !new_s1) { // falling edge
 		off_time = Tick + LED_TIME_LONG;
 		GPIOB->BSRR = (1<<0);
 	}
 	old_s1 = new_s1;
 
-	if (Tick > off_time) {
-			GPIOB->BRR = (1<<0);
-		}
+	if (Tick > off_time) { // switches LED2 off when the time is right
+		GPIOB->BRR = (1<<0);
+	}
 
 }
 
