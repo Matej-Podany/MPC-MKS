@@ -23,10 +23,11 @@
   #warning "FPU is not initialized, but the project is compiling for an FPU. Please initialize the FPU before use."
 #endif
 
-#define LED_TIME_BLINK 300 // preprocesor replaces LED_TIME_BLINK with number 300
-#define LED_TIME_SHORT 100 // preprocesor replaces LED_TIME_SHORT with number 100
-#define LED_TIME_LONG 1000 // preprocesor replaces LED_TIME_LONG with number 1000
-#define SAMPLE_TIME 40 // preprocesor replaces SAMPLE_TIME with number 40
+#define LED_TIME_BLINK 300 // preprocessor replaces LED_TIME_BLINK with number 300
+#define LED_TIME_SHORT 100 // preprocessor replaces LED_TIME_SHORT with number 100
+#define LED_TIME_LONG 1000 // preprocessor replaces LED_TIME_LONG with number 1000
+#define SAMPLE_TIME 40 // preprocessor replaces SAMPLE_TIME with number 40
+#define DEBOUNCE_TIME 5 // preprocessor replaces SAMPLE_TIME with number 5
 
 volatile uint32_t Tick; // global variable
 
@@ -41,6 +42,7 @@ void blikac(void)// this function is non-blockative counter for LED_TIME_BLINK m
 }
 
 void tlacitka(){ // non/blocking function for reading buttons S1 and S2 and switching on LED2 for 1000 ms (S1) or 100 ms (S2)
+	/* !!!! COMMENTED BECAUSE OF COLLISION WITH TASK 5, HOWEVER THIS TYPE OF SAMPLING IS GOOD ENOUGH IN MOST APLICATIONS !!!!
 	static uint32_t old_s1;
 	static uint32_t old_s2;
 	static uint32_t off_time;
@@ -48,7 +50,7 @@ void tlacitka(){ // non/blocking function for reading buttons S1 and S2 and swit
 	uint32_t new_s2;
 	uint32_t new_s1;
 
-	/*Sampling buttons every 40 ms*/
+	Sampling buttons every 40 ms
 	if (Tick > stop_sample){
 		new_s2 = GPIOC->IDR & (1<<0); // S2
 		new_s1 = GPIOC->IDR & (1<<1); // S1
@@ -69,8 +71,23 @@ void tlacitka(){ // non/blocking function for reading buttons S1 and S2 and swit
 
 	if (Tick > off_time) { // switches LED2 off when the time is right
 		GPIOB->BRR = (1<<0);
-	}
+	}*/
 
+	// TASK 5
+	static uint16_t debounce = 0xFFFF;
+	static uint32_t old_s1;
+	static uint32_t old_s2;
+	static uint32_t off_time;
+	static uint32_t stop_sample;
+	uint32_t new_s2;
+	uint32_t new_s1;
+
+	//Sampling buttons every 5 ms
+	if (Tick > stop_sample){
+		new_s2 = GPIOC->IDR & (1<<0); // S2
+		new_s1 = GPIOC->IDR & (1<<1); // S1
+		stop_sample = Tick + DEBOUNCE_TIME;
+	}
 }
 
 int main(void)
@@ -82,8 +99,8 @@ int main(void)
     /*Setting GPIO pins*/
     GPIOA->MODER |= GPIO_MODER_MODER4_0; // LED1 = PA4, output
     GPIOB->MODER |= GPIO_MODER_MODER0_0; // LED2 = PB0, output
-    GPIOC->PUPDR |= GPIO_PUPDR_PUPDR0_0; // S2 = PC0, pullup
-    GPIOC->PUPDR |= GPIO_PUPDR_PUPDR1_0; // S1 = PC1, pullup
+    GPIOC->PUPDR |= GPIO_PUPDR_PUPDR0_0; // S2 = PC0, pull-up
+    GPIOC->PUPDR |= GPIO_PUPDR_PUPDR1_0; // S1 = PC1, pull-up
 
     /*Definitions for interrupt !!!! COMMENTED BECAUSE OF OVERLAPING BUTTON S2 WITH TASK 4 !!!!*/
 //    SYSCFG->EXTICR[0] |= SYSCFG_EXTICR1_EXTI0_PC; // select PC0 for EXTI0
