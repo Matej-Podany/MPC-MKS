@@ -24,6 +24,8 @@
 #endif
 
 #define LED_TIME_BLINK 300 // preprocesor replaces LED_TIME_BLINK with number 300
+#define LED_TIME_SHORT 100 // preprocesor replaces LED_TIME_SHORT with number 100
+#define LED_TIME_LONG 1000 // preprocesor replaces LED_TIME_LONG with number 1000
 
 volatile uint32_t Tick; // global variable
 
@@ -35,6 +37,30 @@ void blikac(void)// this function is non-blockative counter for LED_TIME_BLINK m
 		GPIOA->ODR ^= (1<<4); // reads value of LED1  and toggle LED1s value
 		delay = Tick;
 	}
+}
+
+void tlacitka(){ // non/blocking function for reading buttons S1 and S2 and switching on LED2 for 1000 ms (S1) or 100 ms (S2)
+	static uint32_t old_s2;
+	static uint32_t off_time;
+	uint32_t new_s2 = GPIOC->IDR & (1<<0);
+	if (old_s2 && !new_s2) { // falling edge
+		off_time = Tick + LED_TIME_SHORT;
+		GPIOB->BSRR = (1<<0);
+	}
+	old_s2 = new_s2;
+
+	static uint32_t old_s1;
+	uint32_t new_s1 = GPIOC->IDR & (1<<1);
+	if (old_s1 && !new_s1) { // falling edge
+		off_time = Tick + LED_TIME_LONG;
+		GPIOB->BSRR = (1<<0);
+	}
+	old_s1 = new_s1;
+
+	if (Tick > off_time) {
+			GPIOB->BRR = (1<<0);
+		}
+
 }
 
 int main(void)
@@ -49,11 +75,11 @@ int main(void)
     GPIOC->PUPDR |= GPIO_PUPDR_PUPDR0_0; // S2 = PC0, pullup
     GPIOC->PUPDR |= GPIO_PUPDR_PUPDR1_0; // S1 = PC1, pullup
 
-    /*Definitions for interrupt*/
-    SYSCFG->EXTICR[0] |= SYSCFG_EXTICR1_EXTI0_PC; // select PC0 for EXTI0
-    EXTI->IMR |= EXTI_IMR_MR0; // mask
-    EXTI->FTSR |= EXTI_FTSR_TR0; // trigger on falling edge
-    NVIC_EnableIRQ(EXTI0_1_IRQn); // enable EXTI0_1
+    /*Definitions for interrupt !!!! COMMENTED BECAUSE OF OVERLAPING BUTTON S2 WITH TASK 4 !!!!*/
+//    SYSCFG->EXTICR[0] |= SYSCFG_EXTICR1_EXTI0_PC; // select PC0 for EXTI0
+//    EXTI->IMR |= EXTI_IMR_MR0; // mask
+//    EXTI->FTSR |= EXTI_FTSR_TR0; // trigger on falling edge
+//    NVIC_EnableIRQ(EXTI0_1_IRQn); // enable EXTI0_1
 
     /*Turning shields LED1 and LED2 on*/
     GPIOA->BSRR = (1<<4); // set LED1
@@ -64,16 +90,18 @@ int main(void)
 
     while (1) {
     	blikac(); // calling function for non-blockative counter
+    	tlacitka(); // calling function for non-blockative counter
     }
 }
-void EXTI0_1_IRQHandler(void)
-{
-    if (EXTI->PR & EXTI_PR_PR0) { // check line 0 has triggered the IT
-    	EXTI->PR |= EXTI_PR_PR0; // clear the pending bit
-    	GPIOB->ODR ^= (1<<0); // reads value of LED2  and toggle LED2s value
-
-    }
-}
+// !!!! COMMENTED BECAUSE OF OVERLAPING BUTTON S2 WITH TASK 4 !!!!
+//void EXTI0_1_IRQHandler(void)
+//{
+//    if (EXTI->PR & EXTI_PR_PR0) { // check line 0 has triggered the IT
+//    	EXTI->PR |= EXTI_PR_PR0; // clear the pending bit
+//    	GPIOB->ODR ^= (1<<0); // reads value of LED2  and toggle LED2s value
+//
+//    }
+//}
 void SysTick_Handler(void){
 	Tick++; // important handler
 }
