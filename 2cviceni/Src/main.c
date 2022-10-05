@@ -31,8 +31,7 @@
 
 volatile uint32_t Tick; // global variable
 
-void blikac(void)// this function is non-blockative counter for LED_TIME_BLINK ms
-{
+void blikac(void){ // this function is non-blockative counter for LED_TIME_BLINK ms
 	static uint32_t delay;
 
 	if (Tick > delay + LED_TIME_BLINK) {
@@ -110,8 +109,7 @@ void tlacitka(){ // non/blocking function for reading buttons S1 and S2 and swit
 	}
 }
 
-int main(void)
-{
+int main(void){
 	/*Setting clock pins*/
     RCC->AHBENR |= RCC_AHBENR_GPIOAEN | RCC_AHBENR_GPIOBEN | RCC_AHBENR_GPIOCEN; // enable clock GPIOA,B,C
     RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN; // SYSCFG clock enable
