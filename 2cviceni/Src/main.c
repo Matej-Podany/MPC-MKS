@@ -25,43 +25,33 @@
 
 int main(void)
 {
-    RCC->AHBENR |= RCC_AHBENR_GPIOAEN;
-    GPIOA->MODER |= GPIO_MODER_MODER5_0;
-    GPIOA->BRR = (1<<5); // reset
-    /*uint8_t pole[32] = {1,0,1,0,1,0,0,1,1,1,0,1,1,1,0,1,1,1,
-    					0,0,1,0,1,0,1,0,0,0,0,0,0,0};
-    // pole filled with sos sequence
-	 Loop forever
-	while (1) {
-		for (uint8_t i = 0; i < 32; i++) { // loop for blinking
-			if (pole[i] == 1){ // condition for SOS sequence
-				GPIOA->BSRR = (1<<5); // set
-			}
-			else {
-				GPIOA->BRR = (1<<5); // reset
-			}
-			for (volatile uint32_t i = 0; i < 100000; i++) {}
-		}
 
-	}*/
-    uint32_t morse = 0b10101001110111011100101010000000;
-    uint8_t i = 0;
-    //testovat nejvyssi bit
-    //(1UL << 31) je to same jako 0b10000000000000000000000000000000
-    //(morse & 1UL << 31)
-    //morse = morse << 1;
+    RCC->AHBENR |= RCC_AHBENR_GPIOAEN | RCC_AHBENR_GPIOBEN | RCC_AHBENR_GPIOCEN; // enable
+    RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN; // SYSCFG clock enable
+    GPIOA->MODER |= GPIO_MODER_MODER4_0; // LED1 = PA4, output
+    GPIOB->MODER |= GPIO_MODER_MODER0_0; // LED2 = PB0, output
+    GPIOC->PUPDR |= GPIO_PUPDR_PUPDR0_0; // S2 = PC0, pullup
+    GPIOC->PUPDR |= GPIO_PUPDR_PUPDR1_0; // S1 = PC1, pullup
+
+    SYSCFG->EXTICR[0] |= SYSCFG_EXTICR1_EXTI0_PC; // select PC0 for EXTI0
+    EXTI->IMR |= EXTI_IMR_MR0; // mask
+    EXTI->FTSR |= EXTI_FTSR_TR0; // trigger on falling edge
+    NVIC_EnableIRQ(EXTI0_1_IRQn); // enable EXTI0_1
+
+    GPIOA->BSRR = (1<<4); // set LED1
+    GPIOB->BSRR = (1<<0); // set LED2
+
+
+
     while (1) {
-    	if (morse & (1UL << 31)){
-    		GPIOA->BSRR = (1<<5); // set
-    	}
-    	else {
-    		GPIOA->BRR = (1<<5); // reset
-    	}
-    	morse = morse << 1;
-    	if (i++ == 31){
-    		morse = 0b10101001110111011100101010000000;
-    		i = 0;
-    	}
-    	for (volatile uint32_t i = 0; i < 100000; i++) {}
+
     }
 }
+void EXTI0_1_IRQHandler(void)
+    {
+    	if (EXTI->PR & EXTI_PR_PR0) { // check line 0 has triggered the IT
+    		EXTI->PR |= EXTI_PR_PR0; // clear the pending bit
+    		GPIOB->ODR ^= (1<<0); // reads value of LED2  and toggle LED2s value
+
+    	}
+    }

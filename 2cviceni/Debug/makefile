@@ -33,34 +33,34 @@ $(wildcard ../makefile.init) \
 $(wildcard ../makefile.targets) \
 
 
-BUILD_ARTIFACT_NAME := 1cviceni
+BUILD_ARTIFACT_NAME := 2cviceni
 BUILD_ARTIFACT_EXTENSION := elf
 BUILD_ARTIFACT_PREFIX :=
 BUILD_ARTIFACT := $(BUILD_ARTIFACT_PREFIX)$(BUILD_ARTIFACT_NAME)$(if $(BUILD_ARTIFACT_EXTENSION),.$(BUILD_ARTIFACT_EXTENSION),)
 
 # Add inputs and outputs from these tool invocations to the build variables 
 EXECUTABLES += \
-1cviceni.elf \
+2cviceni.elf \
 
 MAP_FILES += \
-1cviceni.map \
+2cviceni.map \
 
 SIZE_OUTPUT += \
 default.size.stdout \
 
 OBJDUMP_LIST += \
-1cviceni.list \
+2cviceni.list \
 
 
 # All Target
 all: main-build
 
 # Main-build Target
-main-build: 1cviceni.elf secondary-outputs
+main-build: 2cviceni.elf secondary-outputs
 
 # Tool invocations
-1cviceni.elf 1cviceni.map: $(OBJS) $(USER_OBJS) C:\Temp\221344\MPC-MKS\1cviceni\STM32F030R8TX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "1cviceni.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m0 -T"C:\Temp\221344\MPC-MKS\1cviceni\STM32F030R8TX_FLASH.ld" --specs=nosys.specs -Wl,-Map="1cviceni.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+2cviceni.elf 2cviceni.map: $(OBJS) $(USER_OBJS) C:\Temp\221344\MPC-MKS\2cviceni\STM32F030R8TX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "2cviceni.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m0 -T"C:\Temp\221344\MPC-MKS\2cviceni\STM32F030R8TX_FLASH.ld" --specs=nosys.specs -Wl,-Map="2cviceni.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 
@@ -69,14 +69,14 @@ default.size.stdout: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
 	@echo 'Finished building: $@'
 	@echo ' '
 
-1cviceni.list: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-objdump -h -S $(EXECUTABLES) > "1cviceni.list"
+2cviceni.list: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-objdump -h -S $(EXECUTABLES) > "2cviceni.list"
 	@echo 'Finished building: $@'
 	@echo ' '
 
 # Other Targets
 clean:
-	-$(RM) 1cviceni.elf 1cviceni.list 1cviceni.map default.size.stdout
+	-$(RM) 2cviceni.elf 2cviceni.list 2cviceni.map default.size.stdout
 	-@echo ' '
 
 secondary-outputs: $(SIZE_OUTPUT) $(OBJDUMP_LIST)
