@@ -20,4 +20,6 @@ void sct_init(void); // function declaration
 
 void sct_led(uint32_t value); // function declaration
 
+void sct_value(uint16_t value); // function declaration
+
 #endif /* SCT_H_ */

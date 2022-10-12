@@ -21,12 +21,21 @@
   #warning "FPU is not initialized, but the project is compiling for an FPU. Please initialize the FPU before use."
 #endif
 
-sct_init(); // initialization of the segment display
+volatile uint32_t Tick = 0; // global variable
 
 int main(void) {
-	sct_led(0x7A5C36DE);
-	while (1) {
+	SysTick_Config(8000000); // 1 s
+	RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN; // SYSCFG clock enable
 
+	sct_init(); // initialization of the segment display
+	while (1) {
+		sct_value((uint16_t) Tick * 111); // sends on display not actual Tick number, but 000, 111, 222 etc
 	}
 }
 
+void SysTick_Handler(void) {
+	Tick++; // important handler
+	if (Tick > 9) { // condition for calculation only to 9
+		Tick = 0;
+	}
+}
