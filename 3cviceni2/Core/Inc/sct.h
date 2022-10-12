@@ -8,8 +8,6 @@
 #ifndef SCT_H_
 #define SCT_H_
 
-#include <stdint.h>
-#include <stm32f0xx.h>
 
 void sct_init(void); // function declaration
 

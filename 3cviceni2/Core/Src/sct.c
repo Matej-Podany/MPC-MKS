@@ -5,8 +5,8 @@
  *      Author: xpodan00
  */
 
-#include "sct.h" // including header file
 #include "main.h" // including header file
+#include "sct.h" // including header file
 
 void sct_init(void) {
 	sct_led(0); // calling function sct_led() with argument (value) 0
