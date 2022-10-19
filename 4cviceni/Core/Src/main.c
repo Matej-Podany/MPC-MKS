@@ -32,6 +32,7 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 #define DELAY 50 // 50 ms
+#define ADC_Q 12 // Q = 2^12, exponential accumulation is divided by Q
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -61,7 +62,13 @@ static void MX_ADC_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
- raw_pot = HAL_ADC_GetValue(hadc);
+	//raw_pot = HAL_ADC_GetValue(hadc); // only this here for working task 1
+	/*start of task 2*/
+	static uint32_t avg_pot;
+	raw_pot = avg_pot >> ADC_Q;
+	avg_pot -= raw_pot;
+	avg_pot += HAL_ADC_GetValue(hadc);
+	/*end of task 2*/
 }
 
 /* USER CODE END 0 */
