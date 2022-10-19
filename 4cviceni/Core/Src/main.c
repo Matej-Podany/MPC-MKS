@@ -32,7 +32,13 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 #define DELAY 50 // 50 ms
+#define DELAY_BUTTON 1000 // 1 s
 #define ADC_Q 12 // Q = 2^12, exponential accumulation is divided by Q
+/* Temperature sensor calibration value address */
+#define TEMP110_CAL_ADDR ((uint16_t*) ((uint32_t) 0x1FFFF7C2))
+#define TEMP30_CAL_ADDR ((uint16_t*) ((uint32_t) 0x1FFFF7B8))
+/* Internal voltage reference calibration value address */
+#define VREFINT_CAL_ADDR ((uint16_t*) ((uint32_t) 0x1FFFF7BA))
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -47,7 +53,8 @@ UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
 static volatile uint32_t raw_pot;
-volatile uint32_t Tick = 0; // global variable
+static volatile uint32_t raw_temp;
+static volatile uint32_t raw_volt;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -63,12 +70,30 @@ static void MX_ADC_Init(void);
 /* USER CODE BEGIN 0 */
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
 	//raw_pot = HAL_ADC_GetValue(hadc); // only this here for working task 1
-	/*start of task 2*/
-	static uint32_t avg_pot;
-	raw_pot = avg_pot >> ADC_Q;
-	avg_pot -= raw_pot;
-	avg_pot += HAL_ADC_GetValue(hadc);
+	/*start of task 2*/ // exponential accumulation algorithm
+//	static uint32_t avg_pot;
+//	raw_pot = avg_pot >> ADC_Q;
+//	avg_pot -= raw_pot;
+//	avg_pot += HAL_ADC_GetValue(hadc);
 	/*end of task 2*/
+	/*start of task 3*/
+	static uint32_t avg_pot;
+	static uint8_t channel = 0;
+	if (channel == 0) { // first sampling is potentiometer and calculating exponential accumulation
+		raw_pot = avg_pot >> ADC_Q;
+		avg_pot -= raw_pot;
+		avg_pot += HAL_ADC_GetValue(hadc);
+	}
+	if (channel == 1) { // second sampling is temperature of the MCU
+		raw_temp = HAL_ADC_GetValue(hadc);
+	}
+	if (channel == 2) { // third sampling is voltage
+		raw_volt = HAL_ADC_GetValue(hadc);
+	}
+	if (__HAL_ADC_GET_FLAG(hadc, ADC_FLAG_EOS)) channel = 0; // EOS = end of cycle so reset channel
+	else channel++;
+
+	/*end of task 3*/
 }
 
 /* USER CODE END 0 */
@@ -118,42 +143,49 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 	  static uint32_t LastDisplayTicks = 0;
+	  static uint32_t LastDisplayTicksButtons = 0;
 	  static uint8_t Barograph = 0;
+	  static enum { SHOW_POT, SHOW_VOLT, SHOW_TEMP } state = SHOW_POT;
+	  static uint32_t raw_pot_limited = 0;
+	  static uint32_t voltage;
+	  static int32_t temperature;
 	  if (HAL_GetTick() >= LastDisplayTicks + DELAY) { // condition for DELAY delay
 		  LastDisplayTicks = HAL_GetTick();
-		  uint32_t raw_pot_limited = raw_pot*0.1223; // slightly more than 500/2^12 = 0.12207,
-		  // 0.1223 value was tested and it is better for function
-		  if (raw_pot_limited <= 55) {
-			  Barograph = 0;
+		  if (!HAL_GPIO_ReadPin(GPIOC, S2_Pin)) { // if button S2 is pushed, show SHOW_VOLT
+			  state = SHOW_VOLT;
+			  LastDisplayTicksButtons = HAL_GetTick();
 		  }
-		  else if (raw_pot_limited <= 111) {
-			  Barograph = 1;
+		  if (!HAL_GPIO_ReadPin(GPIOC, S1_Pin)) { // if button S1 is pushed, show SHOW_TEMP
+			  state = SHOW_TEMP;
+			  LastDisplayTicksButtons = HAL_GetTick();
 		  }
-		  else if (raw_pot_limited <= 166) {
-			  Barograph = 2;
+		  if ((HAL_GetTick() >= LastDisplayTicksButtons + DELAY_BUTTON)) { // after 1 second display returns to SHOW_POT
+			  state = SHOW_POT;
 		  }
-		  else if (raw_pot_limited <= 222) {
-			  Barograph = 3;
+		  switch (state)
+		  {
+		  	  case SHOW_POT:
+		  		  raw_pot_limited = raw_pot*0.1223; // slightly more than 500/2^12 = 0.12207,
+		  		  // 0.1223 value was tested and it is better for function
+		  		  Barograph = raw_pot * 9 / 4095; // Barograph division (linear function)
+		  		  sct_value(raw_pot_limited, Barograph);
+		  		  // Barograph 0-8 values are used to switch on 0-8 leds
+		  		  break;
+		  	  case SHOW_VOLT:
+		  		  voltage = 330 * (*VREFINT_CAL_ADDR) / raw_volt; // voltage calculation
+		  		  sct_value(voltage, 0);
+		  		  break;
+		  	  case SHOW_TEMP:
+		  		  temperature = (raw_temp - (int32_t)(*TEMP30_CAL_ADDR)); // temperature calculation
+		  		  temperature = temperature * (int32_t)(110 - 30);
+		  		  temperature = temperature / (int32_t)(*TEMP110_CAL_ADDR - *TEMP30_CAL_ADDR);
+		  		  temperature = temperature + 30;
+		  		  sct_value(temperature, 0);
+		  		  break;
+		  	  default:
+		  		  state = SHOW_POT;
 		  }
-		  else if (raw_pot_limited <= 277) {
-			  Barograph = 4;
-		  }
-		  else if (raw_pot_limited <= 333) {
-			  Barograph = 5;
-		  }
-		  else if (raw_pot_limited <= 388) {
-			  Barograph = 6;
-		  }
-		  else if (raw_pot_limited <= 444) {
-			  Barograph = 7;
-		  }
-		  else {
-			  Barograph = 8;
-		  }
-		  sct_value(raw_pot_limited, Barograph);
-		  // Barograph 0-8 values are used to switch on 0-8 leds
 	  }
-
   }
   /* USER CODE END 3 */
 }
@@ -242,6 +274,22 @@ static void MX_ADC_Init(void)
   sConfig.Channel = ADC_CHANNEL_0;
   sConfig.Rank = ADC_RANK_CHANNEL_NUMBER;
   sConfig.SamplingTime = ADC_SAMPLETIME_239CYCLES_5;
+  if (HAL_ADC_ConfigChannel(&hadc, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure for the selected ADC regular channel to be converted.
+  */
+  sConfig.Channel = ADC_CHANNEL_TEMPSENSOR;
+  if (HAL_ADC_ConfigChannel(&hadc, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure for the selected ADC regular channel to be converted.
+  */
+  sConfig.Channel = ADC_CHANNEL_VREFINT;
   if (HAL_ADC_ConfigChannel(&hadc, &sConfig) != HAL_OK)
   {
     Error_Handler();
