@@ -23,6 +23,7 @@
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -35,6 +36,7 @@
 #define RX_BUFFER_LEN 64 // circular buffer
 #define uart_rx_write_ptr (RX_BUFFER_LEN - hdma_usart2_rx.Instance->CNDTR) // pointer
 #define CMD_BUFFER_LEN 256 // sorted buffer
+#define EEPROM_ADDR  0xA0 // EEPROM address 0b10100000
 // which reads all unread data
 // it is pointing for last DMA data read
 /* USER CODE END PD */
@@ -120,6 +122,14 @@ static void  uart_process_command(char *cmd) {
 		else if ((LED1 == 0) && (LED2 == 1)) {
 			printf("LED1 is OFF\nLED2 is ON\n");
 		}
+	}
+	else if (strcasecmp(token, "READ") == 0) {
+		token = strtok(NULL, " ");
+		static uint16_t addr = 0;
+		static uint8_t value = 0;
+		addr = atoi(token);
+		HAL_I2C_Mem_Read(&hi2c1, EEPROM_ADDR, addr, I2C_MEMADD_SIZE_16BIT, &value, 1, 1000);
+		printf("Your entered address 0x%04x includes 0x%02x\n", addr, value);
 	}
 }
 
