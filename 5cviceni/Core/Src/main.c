@@ -86,7 +86,7 @@ static void  uart_process_command(char *cmd) {
 		printf("Komunikace OK\n");
 	}
 	else if (strcasecmp(token, "LED1") == 0) { // condition for turning LED1 on or off
-		token = strtok(NULL, " ");
+		token = strtok(NULL, " "); // this is basically used for splitting words for processing (per partes)
 		if (strcasecmp(token, "ON") == 0) {
 			HAL_GPIO_WritePin(GPIOA, LED1_Pin, 1); // LED1 ON
 		}
@@ -123,13 +123,25 @@ static void  uart_process_command(char *cmd) {
 			printf("LED1 is OFF\nLED2 is ON\n");
 		}
 	}
-	else if (strcasecmp(token, "READ") == 0) {
-		token = strtok(NULL, " ");
+	else if (strcasecmp(token, "READ") == 0) { // read one byte on 2-byte address from EEPROM through I2C using USART2
 		static uint16_t addr = 0;
 		static uint8_t value = 0;
+		token = strtok(NULL, " ");
 		addr = atoi(token);
 		HAL_I2C_Mem_Read(&hi2c1, EEPROM_ADDR, addr, I2C_MEMADD_SIZE_16BIT, &value, 1, 1000);
 		printf("Your entered address 0x%04x includes 0x%02x\n", addr, value);
+	}
+	else if (strcasecmp(token, "WRITE") == 0) { // write one byte on 2-byte address in EEPROM through I2C using USART2
+		static uint16_t addr = 0;
+		static uint8_t value = 0;
+		token = strtok(NULL, " ");
+		addr = atoi(token);
+		token = strtok(NULL, " ");
+		value = atoi(token);
+		HAL_I2C_Mem_Write(&hi2c1, EEPROM_ADDR, addr, I2C_MEMADD_SIZE_16BIT, &value, 1, 1000);
+		/* Check if the EEPROM is ready for a new operation */
+		while (HAL_I2C_IsDeviceReady(&hi2c1, EEPROM_ADDR, 300, 1000) == HAL_TIMEOUT) {}
+		printf("Your entered address 0x%04x now includes your entered 0x%02x\n", addr, value);
 	}
 }
 
