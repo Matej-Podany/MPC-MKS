@@ -129,7 +129,7 @@ static void  uart_process_command(char *cmd) {
 		token = strtok(NULL, " ");
 		addr = atoi(token);
 		HAL_I2C_Mem_Read(&hi2c1, EEPROM_ADDR, addr, I2C_MEMADD_SIZE_16BIT, &value, 1, 1000);
-		printf("Your entered address 0x%04x includes 0x%02x\n", addr, value);
+		printf("Your entered address 0x%04X includes 0x%02X\n", addr, value);
 	}
 	else if (strcasecmp(token, "WRITE") == 0) { // write one byte on 2-byte address in EEPROM through I2C using USART2
 		static uint16_t addr = 0;
@@ -141,7 +141,30 @@ static void  uart_process_command(char *cmd) {
 		HAL_I2C_Mem_Write(&hi2c1, EEPROM_ADDR, addr, I2C_MEMADD_SIZE_16BIT, &value, 1, 1000);
 		/* Check if the EEPROM is ready for a new operation */
 		while (HAL_I2C_IsDeviceReady(&hi2c1, EEPROM_ADDR, 300, 1000) == HAL_TIMEOUT) {}
-		printf("Your entered address 0x%04x now includes your entered 0x%02x\n", addr, value);
+		printf("Your entered address 0x%04X now includes your entered 0x%02X\n", addr, value);
+	}
+	else if (strcasecmp(token, "DUMP") == 0) { // reads first 16 bytes from EEPROM through I2C using USART2
+		static uint8_t value = 0;
+		for (uint16_t i = 0; i<8; i++) {
+			HAL_I2C_Mem_Read(&hi2c1, EEPROM_ADDR, i, I2C_MEMADD_SIZE_16BIT, &value, 1, 1000);
+			printf("%02X", value);
+			if (i < 7) {
+				printf(" ");
+			}
+			else {
+				printf(" \n");
+			}
+		}
+		for (uint16_t i = 8; i<16; i++){
+			HAL_I2C_Mem_Read(&hi2c1, EEPROM_ADDR, i, I2C_MEMADD_SIZE_16BIT, &value, 1, 1000);
+			printf("%02X", value);
+			if (i < 15) {
+				printf(" ");
+			}
+			else {
+				printf(" \n");
+			}
+		}
 	}
 }
 
