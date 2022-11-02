@@ -21,7 +21,8 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "1wire.h"
+#include "sct.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -31,6 +32,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define CONVERT_T_DELAY 750
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -92,7 +94,7 @@ int main(void)
   MX_USART2_UART_Init();
   MX_ADC_Init();
   /* USER CODE BEGIN 2 */
-
+  OWInit(); // initialization of 1wire
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -102,6 +104,12 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+	  int16_t temperature;
+	  OWConvertAll(); // reads all data on temperature sensor
+	  HAL_Delay(CONVERT_T_DELAY); // long delay while sensor is reading data
+	  OWReadTemperature(&temperature); // reads through 1Wire temperature
+	  temperature /= 10; // making from 1206 (12.06 °C) into 121 (12.1 °C)
+	  sct_value(temperature, 0); // shows on sevensegment display temerature
   }
   /* USER CODE END 3 */
 }
