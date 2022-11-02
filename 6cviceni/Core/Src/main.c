@@ -23,6 +23,7 @@
 /* USER CODE BEGIN Includes */
 #include "1wire.h"
 #include "sct.h"
+#include "data.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -33,6 +34,7 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 #define CONVERT_T_DELAY 750
+#define DELAY 50
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -95,6 +97,8 @@ int main(void)
   MX_ADC_Init();
   /* USER CODE BEGIN 2 */
   OWInit(); // initialization of 1wire
+  HAL_ADCEx_Calibration_Start(&hadc); // start of calibration
+  HAL_ADC_Start(&hadc); // start of continual sampling
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -104,12 +108,30 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  int16_t temperature;
-	  OWConvertAll(); // reads all data on temperature sensor
-	  HAL_Delay(CONVERT_T_DELAY); // long delay while sensor is reading data
-	  OWReadTemperature(&temperature); // reads through 1Wire temperature
-	  temperature /= 10; // making from 1206 (12.06 °C) into 121 (12.1 °C)
-	  sct_value(temperature, 0); // shows on sevensegment display temerature
+	  /* Task 1 */
+	  //int16_t temperature;
+//	  OWConvertAll(); // reads all data on temperature sensor
+//	  HAL_Delay(CONVERT_T_DELAY); // long delay while sensor is reading data
+//	  OWReadTemperature(&temperature); // reads through 1Wire temperature
+//	  temperature /= 10; // making from 1206 (12.06 °C) into 121 (12.1 °C)
+//	  sct_value(temperature, 0); // shows on sevensegment display temperature
+	  /* End of task 1 */
+	  /* Task 2 */
+	  static uint32_t LastDisplayTicks = 0;
+	  static uint32_t LastSampleTicks = 0;
+	  static int16_t adc_value;
+	  if (HAL_GetTick() >= LastSampleTicks + CONVERT_T_DELAY) {
+		  LastSampleTicks = HAL_GetTick();
+		  adc_value = HAL_ADC_GetValue(&hadc); // reads actual ADC value (from 0 to 1023)
+		  if (adc_value <= 59) { // making from 1206 (12.06 °C) into 121 (12.1 °C) in case of low adc value
+			  sct_value(NTC_LOOKUP_TABLE[adc_value] / 10, 0); // show temperature on sevensegment
+		  }
+
+		  else {
+			  sct_value(NTC_LOOKUP_TABLE[adc_value], 0); // show temperature on sevensegment
+		  }
+	  }
+	  /* End of task 2 */
   }
   /* USER CODE END 3 */
 }
