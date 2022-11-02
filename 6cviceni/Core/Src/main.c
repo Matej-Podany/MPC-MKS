@@ -116,22 +116,59 @@ int main(void)
 //	  temperature /= 10; // making from 1206 (12.06 °C) into 121 (12.1 °C)
 //	  sct_value(temperature, 0); // shows on sevensegment display temperature
 	  /* End of task 1 */
-	  /* Task 2 */
+	  /* Task 2 and 3 */
+	  static enum { SHOW_NTC, SHOW_DS18B20 } state = SHOW_NTC;
 	  static uint32_t LastDisplayTicks = 0;
 	  static uint32_t LastSampleTicks = 0;
 	  static int16_t adc_value;
+	  int16_t temperature;
+	  static uint8_t counter = 0;
 	  if (HAL_GetTick() >= LastSampleTicks + CONVERT_T_DELAY) {
 		  LastSampleTicks = HAL_GetTick();
+		  /* NTC */
 		  adc_value = HAL_ADC_GetValue(&hadc); // reads actual ADC value (from 0 to 1023)
-		  if (adc_value <= 59) { // making from 1206 (12.06 °C) into 121 (12.1 °C) in case of low adc value
-			  sct_value(NTC_LOOKUP_TABLE[adc_value] / 10, 0); // show temperature on sevensegment
+		  /* DS18B20 */
+		  OWConvertAll(); // reads all data on temperature sensor
+		  if (counter >= 1) {
+			  counter = 0;
+			  OWReadTemperature(&temperature); // reads through 1Wire temperature
+			  temperature /= 10; // making from 1206 (12.06 °C) into 121 (12.1 °C)
+		  }
+		  else {
+			  counter++;
 		  }
 
-		  else {
-			  sct_value(NTC_LOOKUP_TABLE[adc_value], 0); // show temperature on sevensegment
+	  }
+	  if (HAL_GetTick() >= LastDisplayTicks + DELAY) {
+		  if (!HAL_GPIO_ReadPin(GPIOC, S2_Pin)) { // if button S2 is pushed, show SHOW_NTC
+			  state = SHOW_NTC;
+		  }
+		  if (!HAL_GPIO_ReadPin(GPIOC, S1_Pin)) { // if button S1 is pushed, show SHOW_DS18B20
+			  state = SHOW_DS18B20;
+		  }
+		  switch (state)
+		  {
+		  case SHOW_NTC:
+			  HAL_GPIO_WritePin(GPIOB, LED2_Pin, 0); // LED2 OFF
+			  HAL_GPIO_WritePin(GPIOA, LED1_Pin, 1); // LED1 ON
+			  if (adc_value <= 59) { // making from 1206 (12.06 °C) into 121 (12.1 °C) in case of low adc value
+				  sct_value(NTC_LOOKUP_TABLE[adc_value] / 10, 0); // show temperature on sevensegment
+			  }
+
+			  else {
+				  sct_value(NTC_LOOKUP_TABLE[adc_value], 0); // show temperature on sevensegment
+			  }
+			  break;
+		  case SHOW_DS18B20:
+			  HAL_GPIO_WritePin(GPIOA, LED1_Pin, 0); // LED1 OFF
+			  HAL_GPIO_WritePin(GPIOB, LED2_Pin, 1); // LED2 ON
+			  sct_value(temperature, 0); // shows on sevensegment display temperature
+			  break;
+		  default:
+			  state = SHOW_NTC;
 		  }
 	  }
-	  /* End of task 2 */
+	  /* End of task 2 and 3 */
   }
   /* USER CODE END 3 */
 }
