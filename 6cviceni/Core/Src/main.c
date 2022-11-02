@@ -140,17 +140,17 @@ int main(void)
 
 	  }
 	  if (HAL_GetTick() >= LastDisplayTicks + DELAY) {
-		  if (!HAL_GPIO_ReadPin(GPIOC, S2_Pin)) { // if button S2 is pushed, show SHOW_NTC
+		  if (!HAL_GPIO_ReadPin(S2_GPIO_Port, S2_Pin)) { // if button S2 is pushed, show SHOW_NTC
 			  state = SHOW_NTC;
 		  }
-		  if (!HAL_GPIO_ReadPin(GPIOC, S1_Pin)) { // if button S1 is pushed, show SHOW_DS18B20
+		  if (!HAL_GPIO_ReadPin(S1_GPIO_Port, S1_Pin)) { // if button S1 is pushed, show SHOW_DS18B20
 			  state = SHOW_DS18B20;
 		  }
 		  switch (state)
 		  {
 		  case SHOW_NTC:
-			  HAL_GPIO_WritePin(GPIOB, LED2_Pin, 0); // LED2 OFF
-			  HAL_GPIO_WritePin(GPIOA, LED1_Pin, 1); // LED1 ON
+			  HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, 0); // LED2 OFF
+			  HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, 1); // LED1 ON
 			  if (adc_value <= 59) { // making from 1206 (12.06 °C) into 121 (12.1 °C) in case of low adc value
 				  sct_value(NTC_LOOKUP_TABLE[adc_value] / 10, 0); // show temperature on sevensegment
 			  }
@@ -160,8 +160,8 @@ int main(void)
 			  }
 			  break;
 		  case SHOW_DS18B20:
-			  HAL_GPIO_WritePin(GPIOA, LED1_Pin, 0); // LED1 OFF
-			  HAL_GPIO_WritePin(GPIOB, LED2_Pin, 1); // LED2 ON
+			  HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, 0); // LED1 OFF
+			  HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, 1); // LED2 ON
 			  sct_value(temperature, 0); // shows on sevensegment display temperature
 			  break;
 		  default:
