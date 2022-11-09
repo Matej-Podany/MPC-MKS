@@ -24,6 +24,7 @@
 /* USER CODE BEGIN Includes */
 #include <lis2dw12_reg.h>
 #include <stdlib.h>
+#include <stdio.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -33,6 +34,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define UART_DELAY 1000 // 1s
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -88,6 +90,11 @@ static int32_t platform_read(void *handle, uint8_t reg, uint8_t *bufp, uint16_t 
 {
 	HAL_I2C_Mem_Read(handle, LIS2DW12_I2C_ADD_H, reg, I2C_MEMADD_SIZE_8BIT, bufp, len, 1000);
 	return 0;
+}
+int _write(int file, char const *buf, int n) { // this function is defined in stdio.h as a weak, so we rewrite it
+	/* stdout redirection to UART2 */
+	HAL_UART_Transmit(&huart2, (uint8_t*)(buf), n, HAL_MAX_DELAY);
+	return n;
 }
 /* USER CODE END 0 */
 
@@ -384,15 +391,31 @@ void StartVisualTask(void const * argument)
 	/* Infinite loop */
 	while(1)
 	{
+//		int16_t msg; TASK 1
+//		if (xQueueReceive(xVisualQueueHandle, &msg, portMAX_DELAY)) { // reads msg from queue
+//			if ((msg == -5000) || (msg == 5000)) { // according to the msg value is chosen between turning LED1/2 ON and LED2/1 OFF
+//				HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, 0); // LED2 OFF
+//				HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, 1); // LED1 ON
+//			}
+//			else {
+//				HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, 0); // LED1 OFF
+//				HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, 1); // LED2 ON
+//			}
+//			osDelay(1);
+//		}
 		int16_t msg;
 		if (xQueueReceive(xVisualQueueHandle, &msg, portMAX_DELAY)) { // reads msg from queue
-			if ((msg == -5000) || (msg == 5000)) { // acording
+			if (msg >= 1000) { // according to the msg value is chosen between turning LED1/2 ON and LED2/1 OFF
+				HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, 0); // LED1 OFF
+				HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, 1); // LED2 ON
+			}
+			else if (msg <= -1000) {
 				HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, 0); // LED2 OFF
 				HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, 1); // LED1 ON
 			}
 			else {
 				HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, 0); // LED1 OFF
-				HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, 1); // LED2 ON
+				HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, 0); // LED2 OFF
 			}
 			osDelay(1);
 		}
@@ -410,37 +433,68 @@ void StartVisualTask(void const * argument)
 void StartAcceleroTask(void const * argument)
 {
   /* USER CODE BEGIN StartAcceleroTask */
-  /* Infinite loop */
+	// Necessary functions for lis2dw12 sensor driver startup
 	lis2dw12_full_scale_set(&lis2dw12, LIS2DW12_2g);
 	lis2dw12_power_mode_set(&lis2dw12, LIS2DW12_CONT_LOW_PWR_LOW_NOISE_2);
 	lis2dw12_block_data_update_set(&lis2dw12, PROPERTY_ENABLE);
 	lis2dw12_fifo_mode_set(&lis2dw12, LIS2DW12_STREAM_MODE); // enable continuous FIFO
 	lis2dw12_data_rate_set(&lis2dw12, LIS2DW12_XL_ODR_25Hz); // enable part from power-down
+
+	uint8_t samples;
+	int16_t raw_acceleration[3];
+
 	int16_t msg;
+
+	// Check device ID - if I2C works correctly, OK is being sent to the UART
+	uint8_t whoamI = 0;
+	lis2dw12_device_id_get(&lis2dw12, &whoamI);
+	printf("LIS2DW12_ID %s\n", (whoamI == LIS2DW12_ID) ? "OK" : "FAIL");
+
+  /* Infinite loop */
 	while(1)
 	{
-		/* START OF IF CONDITIONS */
-		// they sets every time different value to msg
-		static uint8_t counter = 0;
-		if (counter == 0) {
-			counter++;
-			msg = -5000;
+//		/* START OF IF CONDITIONS */ TASK 1
+//		// they sets every time different value to msg
+//		static uint8_t counter = 0;
+//		if (counter == 0) {
+//			counter++;
+//			msg = -5000;
+//		}
+//		else if (counter == 1) {
+//			counter++;
+//			msg = 0;
+//		}
+//		else if (counter == 2) {
+//			counter++;
+//			msg = 5000;
+//		}
+//		else {
+//			counter = 0;
+//			msg = 0;
+//		}
+//		/* END OF IF CONDITIONS */
+//		xQueueSend(xVisualQueueHandle, &msg, 0); // sends to the queue msg value
+//		osDelay(300); // RTOS delay - blocking only in this process, but not in overall CPU time
+
+		/* START OF TASK 2 */
+		static uint32_t LastTicks = 0; // for non-blocking
+		// this gets data from accelerometer including for cycle, which extracts all of the data
+		lis2dw12_fifo_data_level_get(&lis2dw12, &samples);
+		for (uint8_t i = 0; i < samples; i++) {
+			// Read acceleration data
+			lis2dw12_acceleration_raw_get(&lis2dw12, raw_acceleration);
 		}
-		else if (counter == 1) {
-			counter++;
-			msg = 0;
-		}
-		else if (counter == 2) {
-			counter++;
-			msg = 5000;
-		}
-		else {
-			counter = 0;
-			msg = 0;
-		}
-		/* END OF IF CONDITIONS */
+		// X coordinate is set to the msg
+		msg = raw_acceleration[0];
+		// sends X coordinate (msg) to the queue
 		xQueueSend(xVisualQueueHandle, &msg, 0); // sends to the queue msg value
-		osDelay(300); // RTOS delay - blocking only in this process, but not in overall CPU time
+
+		if (xTaskGetTickCount() >= LastTicks + UART_DELAY) { // non-blocking waiting exclusive for RTOS
+			LastTicks = xTaskGetTickCount(); // tick exclusive for RTOS
+			printf("X=%d Y=%d Z=%d\n", raw_acceleration[0], raw_acceleration[1], raw_acceleration[2]); // sends all coordinates to UART
+		}
+		osDelay(50);
+		/* END OF TASK 2 */
 	}
   /* USER CODE END StartAcceleroTask */
 }
