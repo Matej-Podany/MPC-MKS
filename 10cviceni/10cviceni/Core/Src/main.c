@@ -22,6 +22,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
+#include <string.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -31,6 +32,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define TIMEOUT_DELAY 5000 // ms = 5 s
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -58,7 +60,7 @@ static void MX_TIM3_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-int __io_putchar(int ch)
+int __io_putchar(int ch) // function for overwriting weak function _write
 {
 ITM_SendChar(ch);
 return 0;
@@ -97,8 +99,8 @@ int main(void)
   MX_USART3_UART_Init();
   MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
-  HAL_TIM_Base_Start_IT(&htim3);
-  const correct_password[5] = {7,9,3,2,12};
+  HAL_TIM_Base_Start_IT(&htim3); // initialization of TIMER 3
+  const char correct_password[5] = {1,2,3,4,12}; // defining access password
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -108,13 +110,69 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  if (key != -1) {
-		  printf("Stisknuto: %2d\n", key);
-		  HAL_Delay(250);
-		  key = -1;
+	  static char password[5]; // input password
+	  static uint8_t counter = 0;
+	  static uint32_t timeout = 0;
+	  static uint8_t flag = 0;
+	  if (key != -1) { // this if is activated if user pushes any button
+		  printf("Input: %2d\n", key); // printing to debugger pushed button
+		  password[counter] = key; // storing pushed button into the field
+		  counter++;
+		  HAL_Delay(250); // important delay
+		  key = -1; // reset key condition
 	  }
-
-	  //printf("I missed the part where that's my problem\n");
+	  if ((counter >= 5) && !(strncmp(password, correct_password, 5))) { // if user pushed 5 buttons (or more)
+		  // and if entered password is the same as correct_password, then is access granted and LED blinked
+		  printf("Access granted!\n");
+		  counter = 0;
+		  flag = 0;
+		  HAL_GPIO_TogglePin(LD1_GPIO_Port, LD1_Pin);
+		  HAL_Delay(50);
+		  HAL_GPIO_TogglePin(LD1_GPIO_Port, LD1_Pin);
+		  HAL_Delay(50);
+		  HAL_GPIO_TogglePin(LD1_GPIO_Port, LD1_Pin);
+		  HAL_Delay(50);
+		  HAL_GPIO_TogglePin(LD1_GPIO_Port, LD1_Pin);
+		  HAL_Delay(50);
+		  HAL_GPIO_TogglePin(LD1_GPIO_Port, LD1_Pin);
+		  HAL_Delay(50);
+		  HAL_GPIO_TogglePin(LD1_GPIO_Port, LD1_Pin);
+		  HAL_Delay(50);
+		  HAL_GPIO_TogglePin(LD1_GPIO_Port, LD1_Pin);
+		  HAL_Delay(50);
+		  HAL_GPIO_TogglePin(LD1_GPIO_Port, LD1_Pin);
+		  HAL_Delay(50);
+		  HAL_GPIO_TogglePin(LD1_GPIO_Port, LD1_Pin);
+		  HAL_Delay(50);
+		  HAL_GPIO_TogglePin(LD1_GPIO_Port, LD1_Pin);
+		  HAL_Delay(50);
+		  HAL_GPIO_TogglePin(LD1_GPIO_Port, LD1_Pin);
+		  HAL_Delay(50);
+		  HAL_GPIO_TogglePin(LD1_GPIO_Port, LD1_Pin);
+	  }
+	  else if (counter >= 5) { // if user pushed 5 buttons (or more) but entered password does not match the
+		  // correct one and just turn on LED for short time
+		  printf("Access denied!\n");
+		  HAL_GPIO_TogglePin(LD1_GPIO_Port, LD1_Pin);
+		  HAL_Delay(500);
+		  HAL_GPIO_TogglePin(LD1_GPIO_Port, LD1_Pin);
+		  counter = 0;
+		  flag = 0;
+	  }
+	  if ((counter >=1) && (flag == 0)) { // timeout is needed if user pushes at least one button
+		  timeout = HAL_GetTick();
+		  flag = 1;
+	  }
+	  if (flag == 1) { // timeout is needed signalizes flag
+		  if (HAL_GetTick() >= timeout + TIMEOUT_DELAY) { // non-blocking waiting for timeout
+			  counter = 0;
+			  flag = 0;
+			  for(uint8_t i = 0; i<5; i++) {
+				  password[i] = 0;
+			  }
+			  printf("System timeout!\n");
+		  }
+	  }
   }
   /* USER CODE END 3 */
 }
